@@ -9,6 +9,7 @@ import foundry.veil.forge.event.ForgeVeilRegisterFixedBuffersEvent;
 import foundry.veil.forge.event.ForgeVeilRendererEvent;
 import foundry.veil.impl.VeilBuiltinPacks;
 import foundry.veil.impl.VeilReloadListeners;
+import foundry.veil.impl.client.imgui.VeilImGuiImpl;
 import foundry.veil.impl.client.render.VeilUITooltipRenderer;
 import foundry.veil.impl.client.render.shader.VeilVanillaShaders;
 import foundry.veil.mixin.accessor.RenderStateShardAccessor;
@@ -30,6 +31,8 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.ModLoader;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLLoader;
+import net.minecraftforge.fml.loading.FMLPaths;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.nio.file.Path;
@@ -38,6 +41,7 @@ import java.nio.file.Path;
 public class VeilForgeClient {
 
     public static void init() {
+        setImGuiPathInMacForgeDev();
         VeilClient.init();
 
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -56,6 +60,19 @@ public class VeilForgeClient {
         }));
         ForgeRenderTypeStageHandler.setBlockLayers(blockLayers);
     }
+
+    private static void setImGuiPathInMacForgeDev() {
+        // Corner case: Manual path definition required in Forge dev for MacOS on ARM
+        //  System property must be set before any of ImGui becomes classloaded
+		if (!FMLLoader.isProduction() && VeilImGuiImpl.shouldLoadARM64()) {
+            // Define the base path and the relative path to the native library
+			String relativePath = "../build/sourcesSets/main/io/imgui/java/native-bin/";
+			// Resolve the absolute path to the native library
+			Path nativeLibPath = FMLPaths.GAMEDIR.get().resolve(relativePath).normalize();
+
+			System.setProperty("imgui.library.path", nativeLibPath.toAbsolutePath().toString());
+		}
+	}
 
     private static void registerListeners(RegisterClientReloadListenersEvent event) {
         VeilClient.initRenderer();
